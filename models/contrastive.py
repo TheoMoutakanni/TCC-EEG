@@ -1,8 +1,13 @@
+import numpy as np
+from skorch import NeuralNetClassifier
+from skorch.helper import predefined_split
+from skorch.callbacks import EpochScoring
 import torch
 from torch import nn
 import torch.nn.functional as F
 
-class EncoderNet(torch.nn.Module):
+
+class EncoderNet(nn.Module):
     def __init__(self, n_channels, sfreq, n_conv_chs=8, time_conv_size_s=0.5,
                  max_pool_size_s=0.125, input_size_s=30,
                  dropout=0.25, apply_batch_norm=False):
@@ -71,3 +76,67 @@ class ContrastiveModule(nn.Module):
         x = torch.abs(x1 - x2)
         x = self.fc(x)
         return x, features
+
+
+class ClassifierNet(nn.Module):
+    def __init__(self, encoder):
+        super(ClassifierNet, self).__init__()
+        #Auto-encoder
+        self.encoder = encoder
+        #Dense classifier
+        self.dense1 = nn.Linear(encoder.num_features, encoder.num_features)
+        self.dense2 = nn.Linear(encoder.num_features, 5)
+        self.softmax = nn.Softmax(dim=-1)
+
+    def forward(self, x):
+        with torch.no_grad():
+            x = self.encoder(x)
+        x = self.dense1(x)
+        x = F.relu(x)
+        x = self.dense2(x)
+        x = self.softmax(x)
+        return x
+    
+
+class Classifier:
+    def __init__(self, encoder):
+        self.encoder = encoder
+
+
+    def train(self, train_set, valid_set, test_set=None, lr=5e-4, batch_size=16, n_epochs=20):
+        """
+        """
+        self.classifier_net = ClassifierNet(self.encoder)
+
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        train_bal_acc = EpochScoring(
+            scoring='balanced_accuracy', on_train=True, name='train_bal_acc',
+            lower_is_better=False)
+        valid_bal_acc = EpochScoring(
+            scoring='balanced_accuracy', on_train=False, name='valid_bal_acc',
+            lower_is_better=False)
+        callbacks = [('train_bal_acc', train_bal_acc),
+                     ('valid_bal_acc', valid_bal_acc)]
+
+        self.skorch_classifier = NeuralNetClassifier(
+            self.classifier_net,
+            criterion=torch.nn.CrossEntropyLoss,
+            optimizer=torch.optim.Adam,
+            train_split=predefined_split(valid_set),  # using valid_set for validation
+            optimizer__lr=lr,
+            batch_size=batch_size,
+            callbacks=callbacks,
+            device=device,
+            # Shuffle training data on each epoch
+            iterator_train__shuffle=True,
+        )
+        # Model training for a specified number of epochs. `y` is None as it is already
+        # supplied in the dataset.
+        self.skorch_classifier.fit(train_set, y=None, epochs=n_epochs)
+        
+        if test_set is not None:
+            X, y = zip(*list(iter(test_set)))
+            X = np.array([x for x in X])
+            acc = self.skorch_classifier.score(X, y)
+            return acc
