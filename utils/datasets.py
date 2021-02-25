@@ -75,7 +75,7 @@ def split_dataset(
 
     self_train_subjects = subjects[:self_train_index]
     self_valid_subjects = subjects[self_train_index:self_valid_index]
-    train_subjects = subjects[:self_valid_index]
+    full_train_subjects = subjects[:self_valid_index]
     valid_subjects = subjects[self_valid_index:valid_index]
     test_subjects = subjects[valid_index:]
 
@@ -83,19 +83,19 @@ def split_dataset(
                                             delta_index_positive=5, delta_index_negative=20)
     self_valid_set = TimeContrastiveDataset([splitted[s] for s in self_valid_subjects],
                                             delta_index_positive=5, delta_index_negative=20)
-    train_set = ConcatDataset([splitted[s] for s in train_subjects])
+    full_train_set = ConcatDataset([splitted[s] for s in full_train_subjects])
     valid_set = ConcatDataset([splitted[s] for s in valid_subjects])
     test_set = ConcatDataset([splitted[s] for s in test_subjects])
 
     subjects_dic = {
         "self_train_subjects": self_train_subjects,
         "self_valid_subjects": self_valid_subjects,
-        "train_subjects": train_subjects,
+        "train_subjects": full_train_subjects,
         "valid_subjects": valid_subjects,
         "test_subjects": test_subjects
     }
 
-    return self_train_set, self_valid_set, train_set, valid_set, test_set, subjects_dic
+    return self_train_set, self_valid_set, full_train_set, valid_set, test_set, subjects_dic
 
 
 class TimeContrastiveDataset(BaseConcatDataset):
