@@ -87,7 +87,15 @@ def split_dataset(
     valid_set = ConcatDataset([splitted[s] for s in valid_subjects])
     test_set = ConcatDataset([splitted[s] for s in test_subjects])
 
-    return self_train_set, self_valid_set, train_set, valid_set, test_set
+    subjects_dic = {
+        "self_train_subjects": self_train_subjects,
+        "self_valid_subjects": self_valid_subjects,
+        "train_subjects": train_subjects,
+        "valid_subjects": valid_subjects,
+        "test_subjects": test_subjects
+    }
+
+    return self_train_set, self_valid_set, train_set, valid_set, test_set, subjects_dic
 
 
 class TimeContrastiveDataset(BaseConcatDataset):
