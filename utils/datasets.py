@@ -83,20 +83,41 @@ def split_dataset(
                                             delta_index_positive=5, delta_index_negative=20)
     self_valid_set = TimeContrastiveDataset([splitted[s] for s in self_valid_subjects],
                                             delta_index_positive=5, delta_index_negative=20)
-    full_train_set = ConcatDataset([splitted[s] for s in full_train_subjects])
-    valid_set = ConcatDataset([splitted[s] for s in valid_subjects])
-    test_set = ConcatDataset([splitted[s] for s in test_subjects])
+    full_train_set = SkorchDataset(ConcatDataset([splitted[s] for s in full_train_subjects]))
+    valid_set = SkorchDataset(ConcatDataset([splitted[s] for s in valid_subjects]))
+    test_set = SkorchDataset(ConcatDataset([splitted[s] for s in test_subjects]))
 
     subjects_dic = {
         "self_train_subjects": self_train_subjects,
         "self_valid_subjects": self_valid_subjects,
-        "train_subjects": full_train_subjects,
+        "full_train_subjects": full_train_subjects,
         "valid_subjects": valid_subjects,
         "test_subjects": test_subjects
     }
 
     return self_train_set, self_valid_set, full_train_set, valid_set, test_set, subjects_dic
 
+
+def list_of_train_sets(full_train_subjects, windows_dataset):
+    splitted = windows_dataset.split('subject')
+    train_sets = []
+    for i, _ in enumerate(full_train_subjects):
+        train_set = ConcatDataset([splitted[s] for s in full_train_subjects[:i+1]])
+        train_sets.append(SkorchDataset(train_set))
+    return train_sets
+
+
+class SkorchDataset(torch.utils.data.Dataset):
+    def __init__(self, dataset):
+        self.dataset = dataset
+
+    def __getitem__(self, index):
+        x, y, _ = self.dataset.__getitem__(index)
+        return torch.from_numpy(x).unsqueeze(0), y
+
+    def __len__(self):
+        return len(self.dataset)
+        
 
 class TimeContrastiveDataset(BaseConcatDataset):
     """
