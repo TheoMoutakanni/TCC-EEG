@@ -1,7 +1,7 @@
 import numpy as np
 from skorch import NeuralNetClassifier
 from skorch.helper import predefined_split
-from skorch.callbacks import EpochScoring, ProgressBar
+from skorch.callbacks import EpochScoring, ProgressBar, EarlyStopping
 import torch
 from torch import nn
 import torch.nn.functional as F
@@ -79,7 +79,8 @@ class ContrastiveModule(nn.Module):
         x = self.fc(x)
         return x, features
 
-    def train_(self, train_set, valid_set, lr=5e-4, batch_size=16, nb_epochs=20):
+    def train_(self, train_set, valid_set, lr=5e-4, batch_size=16, max_nb_epochs=20,
+                early_stopping_patience=5):
         # Train using a GPU if possible
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -90,10 +91,13 @@ class ContrastiveModule(nn.Module):
         valid_bal_acc = EpochScoring(
             scoring='balanced_accuracy', on_train=False, name='valid_bal_acc',
             lower_is_better=False)
+        early_stopping = EarlyStopping(
+            monitor='valid_loss', patience=early_stopping_patience)
         callbacks = [
             ('train_bal_acc', train_bal_acc),
             ('valid_bal_acc', valid_bal_acc),
             ('progress_bar', ProgressBar()),
+            ('early_stopping', early_stopping),
         ]
 
         # Skorch model creation
@@ -109,7 +113,7 @@ class ContrastiveModule(nn.Module):
         )
 
         # Training: `y` is None since it is already supplied in the dataset.
-        self.skorch_net.fit(train_set, y=None, epochs=nb_epochs)
+        self.skorch_net.fit(train_set, y=None, epochs=max_nb_epochs)
 
 
 class ClassifierNet(nn.Module):
@@ -137,21 +141,29 @@ class Classifier:
         self.encoder = encoder
 
 
-    def train_and_test(self, train_set, valid_set, test_set=None, lr=5e-4, batch_size=16, nb_epochs=20):
+    def train_and_test(self, train_set, valid_set, test_set=None, lr=5e-4,
+                        batch_size=16, max_nb_epochs=20, early_stopping_patience=5):
         """
         """
         self.classifier_net = ClassifierNet(self.encoder)
 
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+        # Callbacks
         train_bal_acc = EpochScoring(
             scoring='balanced_accuracy', on_train=True, name='train_bal_acc',
             lower_is_better=False)
         valid_bal_acc = EpochScoring(
             scoring='balanced_accuracy', on_train=False, name='valid_bal_acc',
             lower_is_better=False)
-        callbacks = [('train_bal_acc', train_bal_acc),
-                     ('valid_bal_acc', valid_bal_acc)]
+        early_stopping = EarlyStopping(
+            monitor='valid_loss', patience=early_stopping_patience)
+        callbacks = [
+            ('train_bal_acc', train_bal_acc),
+            ('valid_bal_acc', valid_bal_acc),
+            ('progress_bar', ProgressBar()),
+            ('early_stopping', early_stopping),
+        ]
 
         self.skorch_classifier = NeuralNetClassifier(
             self.classifier_net,
@@ -167,7 +179,7 @@ class Classifier:
         )
         # Model training for a specified number of epochs. `y` is None as it is already
         # supplied in the dataset.
-        self.skorch_classifier.fit(train_set, y=None, epochs=nb_epochs)
+        self.skorch_classifier.fit(train_set, y=None, epochs=max_nb_epochs)
         
         if test_set is not None:
             X, y = zip(*list(iter(test_set)))
