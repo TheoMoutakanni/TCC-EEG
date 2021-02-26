@@ -83,11 +83,6 @@ class ContrastiveModule(nn.Module):
         # Train using a GPU if possible
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        # Hyperparameters
-        lr = 5e-4
-        batch_size = 1000
-        nb_epochs = 10
-
         # Callbacks
         train_bal_acc = EpochScoring(
             scoring='balanced_accuracy', on_train=True, name='train_bal_acc',
