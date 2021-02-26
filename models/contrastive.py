@@ -137,6 +137,6 @@ class Classifier:
         
         if test_set is not None:
             X, y = zip(*list(iter(test_set)))
-            X = np.array([x.numpy() for x in X])
+            X = torch.stack(X)
             acc = self.skorch_classifier.score(X, y)
             return acc
