@@ -9,7 +9,6 @@ import pandas as pd
 import torch
 from torch import nn
 import torch.nn.functional as F
-from torch.utils.data import ConcatDataset
 
 
 def get_sleep_physionet(subject_ids=range(83)):
@@ -83,9 +82,9 @@ def split_dataset(
                                             delta_index_positive=5, delta_index_negative=20)
     self_valid_set = TimeContrastiveDataset([splitted[s] for s in self_valid_subjects],
                                             delta_index_positive=5, delta_index_negative=20)
-    full_train_set = SkorchDataset(ConcatDataset([splitted[s] for s in full_train_subjects]))
-    valid_set = SkorchDataset(ConcatDataset([splitted[s] for s in valid_subjects]))
-    test_set = SkorchDataset(ConcatDataset([splitted[s] for s in test_subjects]))
+    full_train_set = SkorchDataset([splitted[s] for s in full_train_subjects])
+    valid_set = SkorchDataset([splitted[s] for s in valid_subjects])
+    test_set = SkorchDataset([splitted[s] for s in test_subjects])
 
     subjects_dic = {
         "self_train_subjects": self_train_subjects,
@@ -102,21 +101,18 @@ def list_of_train_sets(full_train_subjects, windows_dataset):
     splitted = windows_dataset.split('subject')
     train_sets = []
     for i, _ in enumerate(full_train_subjects):
-        train_set = ConcatDataset([splitted[s] for s in full_train_subjects[:i+1]])
-        train_sets.append(SkorchDataset(train_set))
+        train_set = SkorchDataset([splitted[s] for s in full_train_subjects[:i+1]])
+        train_sets.append(train_set)
     return train_sets
 
 
-class SkorchDataset(torch.utils.data.Dataset):
-    def __init__(self, dataset):
-        self.dataset = dataset
+class SkorchDataset(BaseConcatDataset):
+    def __init__(self, list_of_ds):
+        super(SkorchDataset, self).__init__(list_of_ds)
 
     def __getitem__(self, index):
-        x, y, _ = self.dataset.__getitem__(index)
+        x, y, _ = super().__getitem__(index)
         return torch.from_numpy(x).unsqueeze(0), y
-
-    def __len__(self):
-        return len(self.dataset)
         
 
 class TimeContrastiveDataset(BaseConcatDataset):
