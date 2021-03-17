@@ -134,7 +134,9 @@ def train_and_test(
     if train_what == "last":
         for param in classifier_net.encoder.parameters():
             param.requires_grad = False
-    # else train all
+    else: # train all
+        for param in classifier_net.encoder.parameters():
+            param.requires_grad = True
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 

@@ -63,14 +63,16 @@ def split_dataset(
     10% for supervised test_set
     The supervised train_set is identical to self_train_set + self_valid_set
     """
-    assert (self_train_ratio + self_valid_ratio + valid_ratio + test_ratio != 1), "wrong dataset ratios"
+    assert (self_train_ratio + self_valid_ratio + valid_ratio +
+            test_ratio != 1), "wrong dataset ratios"
 
     splitted = windows_dataset.split('subject')
     subjects = list(splitted.keys())
     np.random.shuffle(subjects)
-    self_train_index = round(len(subjects)*self_train_ratio)
-    self_valid_index = self_train_index + round(len(subjects)*self_valid_ratio)
-    valid_index = self_valid_index + round(len(subjects)*valid_ratio)
+    self_train_index = round(len(subjects) * self_train_ratio)
+    self_valid_index = self_train_index + \
+        round(len(subjects) * self_valid_ratio)
+    valid_index = self_valid_index + round(len(subjects) * valid_ratio)
 
     self_train_subjects = subjects[:self_train_index]
     self_valid_subjects = subjects[self_train_index:self_valid_index]
@@ -97,15 +99,6 @@ def split_dataset(
     return self_train_set, self_valid_set, full_train_set, valid_set, test_set, subjects_dic
 
 
-def list_of_train_sets(full_train_subjects, windows_dataset):
-    splitted = windows_dataset.split('subject')
-    train_sets = []
-    for i, _ in enumerate(full_train_subjects):
-        train_set = SkorchDataset([splitted[s] for s in full_train_subjects[:i+1]])
-        train_sets.append(train_set)
-    return train_sets
-
-
 class SkorchDataset(BaseConcatDataset):
     def __init__(self, list_of_ds):
         super(SkorchDataset, self).__init__(list_of_ds)
@@ -113,7 +106,17 @@ class SkorchDataset(BaseConcatDataset):
     def __getitem__(self, index):
         x, y, _ = super().__getitem__(index)
         return torch.from_numpy(x).unsqueeze(0), y
-        
+
+
+def list_of_train_sets(train_subjects, windows_dataset, dataset_cls=SkorchDataset, dataset_args={}):
+    splitted = windows_dataset.split('subject')
+    train_sets = []
+    for i, _ in enumerate(train_subjects):
+        train_set = dataset_cls([splitted[s] for s in train_subjects[:i + 1]],
+                                **dataset_args)
+        train_sets.append(train_set)
+    return train_sets
+
 
 class TimeContrastiveDataset(BaseConcatDataset):
     """

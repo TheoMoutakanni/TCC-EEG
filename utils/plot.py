@@ -86,9 +86,8 @@ def rand_cmap(nlabels, type='bright', first_color_black=True, last_color_black=F
     return random_colormap
 
 
-def plot_embeddings(embds, colors, cmap, legend_dict=None):
-    plt.figure(figsize=(14,12))
-    scatter = plt.scatter(embds[:,0], embds[:,1], c=colors, alpha=0.3, s=6, cmap=cmap)
+def plot_embeddings(embds, colors, cmap, legend_dict=None, alpha=0.3, s=6):
+    scatter = plt.scatter(embds[:,0], embds[:,1], c=colors, alpha=alpha, s=s, cmap=cmap)
     if legend_dict is not None:
         legend = plt.legend(*scatter.legend_elements(prop="colors"),
                         loc="lower right", title=legend_dict['title'])
@@ -98,18 +97,21 @@ def plot_embeddings(embds, colors, cmap, legend_dict=None):
     plt.colorbar()
 
 
-def get_sleep_stages(subjects, windows_dataset):
+def get_sleep_stages(windows_dataset):
+    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
     sleep_stages = [x[1] for x in BaseConcatDataset([windows_dataset.split('subject')[s] for s in subjects])]
     return np.array(sleep_stages)
 
 
-def get_ages(subjects, windows_dataset, info):
+def get_ages(windows_dataset, info):
+    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
     ages = [i for s in subjects
         for i in [info[info['subject'] == int(s)]['age'].iloc[0]]*len(windows_dataset.split('subject')[s])]
     return np.array(ages)
 
 
-def get_subjects(subjects, windows_dataset):
+def get_subjects(windows_dataset):
+    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
     subjects = [int(i) for s in subjects
         for i in [s]*len(windows_dataset.split('subject')[s])]
     return np.array(subjects)
