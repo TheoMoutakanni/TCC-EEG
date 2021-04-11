@@ -9,4 +9,5 @@ There are two main experiments in total:
 The slides of the project presentation are available [here](presentation_slides.pdf), while the project report is shared [there](project_report.pdf).
 
 Authors: Théo Moutakanni and Clément Bonnet.
-April 11th, 2021.
+
+Date: April 11th, 2021.
