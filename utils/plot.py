@@ -4,6 +4,7 @@ from braindecode.datasets.base import BaseConcatDataset
 import matplotlib as mpl
 from matplotlib.colors import LinearSegmentedColormap
 from matplotlib.lines import Line2D
+from matplotlib.collections import LineCollection
 import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA
@@ -86,32 +87,74 @@ def rand_cmap(nlabels, type='bright', first_color_black=True, last_color_black=F
     return random_colormap
 
 
-def plot_embeddings(embds, colors, cmap, legend_dict=None, alpha=0.3, s=6):
+def multiline(xs, ys, c, ax=None, **kwargs):
+    """Plot lines with different colorings
+
+    Parameters
+    ----------
+    xs : iterable container of x coordinates
+    ys : iterable container of y coordinates
+    c : iterable container of numbers mapped to colormap
+    ax (optional): Axes to plot on.
+    kwargs (optional): passed to LineCollection
+
+    Notes:
+        len(xs) == len(ys) == len(c) is the number of line segments
+        len(xs[i]) == len(ys[i]) is the number of points for each line (indexed by i)
+
+    Returns
+    -------
+    lc : LineCollection instance.
+    """
+
+    # find axes
+    ax = plt.gca() if ax is None else ax
+
+    # create LineCollection
+    segments = [np.column_stack([x, y]) for x, y in zip(xs, ys)]
+    lc = LineCollection(segments, **kwargs)
+
+    # set coloring of line segments
+    #    Note: I get an error if I pass c as a list here... not sure why.
+    lc.set_array(np.asarray(c))
+
+    # add lines to axes and rescale 
+    #    Note: adding a collection doesn't autoscalee xlim/ylim
+    ax.add_collection(lc)
+    ax.autoscale()
+    return lc
+
+
+def plot_embeddings(embds, colors, cmap, legend_dict=None, alpha=0.3, s=6, colorbar=True, legend_loc="lower right"):
     scatter = plt.scatter(embds[:,0], embds[:,1], c=colors, alpha=alpha, s=s, cmap=cmap)
     if legend_dict is not None:
         legend = plt.legend(*scatter.legend_elements(prop="colors"),
-                        loc="lower right", title=legend_dict['title'])
+                        loc=legend_loc, title=legend_dict['title'])
         for i in range(len(legend.get_texts())):
             legend.get_texts()[i].set_text(legend_dict['color_mapping'][i])
         plt.gca().add_artist(legend)
-    plt.colorbar()
+    if colorbar:
+        plt.colorbar()
+    plt.grid(False)
+    plt.axis('off')
+    return scatter
 
 
 def get_sleep_stages(windows_dataset):
-    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
+    subjects = windows_dataset.description['subject'].apply(str).unique()
     sleep_stages = [x[1] for x in BaseConcatDataset([windows_dataset.split('subject')[s] for s in subjects])]
     return np.array(sleep_stages)
 
 
 def get_ages(windows_dataset, info):
-    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
+    subjects = windows_dataset.description['subject'].apply(str).unique()
     ages = [i for s in subjects
         for i in [info[info['subject'] == int(s)]['age'].iloc[0]]*len(windows_dataset.split('subject')[s])]
     return np.array(ages)
 
 
 def get_subjects(windows_dataset):
-    subjects = windows_dataset.description['subject'].apply(str).to_numpy()
+    subjects = windows_dataset.description['subject'].apply(str).unique()
     subjects = [int(i) for s in subjects
         for i in [s]*len(windows_dataset.split('subject')[s])]
     return np.array(subjects)

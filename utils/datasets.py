@@ -11,12 +11,12 @@ from torch import nn
 import torch.nn.functional as F
 
 
-def get_sleep_physionet(subject_ids=range(83)):
-    bug_subjects = [36, 39, 48, 52, 65, 68, 69, 73, 75, 78, 79]
-    subject_ids = [id for id in subject_ids if id not in bug_subjects]
+def get_sleep_physionet(subject_ids=range(83), recording_ids=[1, 2]):
+    bug_subjects = [13, 36, 39, 48, 52, 59, 65, 68, 69, 73, 75, 76, 78, 79]
+    subject_ids = [id_ for id_ in subject_ids if id_ not in bug_subjects]
 
     dataset = SleepPhysionet(
-        subject_ids=subject_ids, recording_ids=[0, 1], crop_wake_mins=30)
+        subject_ids=subject_ids, recording_ids=recording_ids, crop_wake_mins=30)
     high_cut_hz = 30
 
     preprocessors = [
