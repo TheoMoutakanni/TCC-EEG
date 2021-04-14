@@ -1,4 +1,5 @@
 import numpy as np
+from sklearn.metrics import balanced_accuracy_score
 from skorch import NeuralNetClassifier
 from skorch.helper import predefined_split
 from skorch.callbacks import EpochScoring, ProgressBar, EarlyStopping
@@ -36,9 +37,10 @@ class EncoderNet(nn.Module):
 
     def forward(self, x):
         """
-        Input shape: (batch_size, 2, 1, n_channels, 3000)
+        Input shape: (batch_size, n_channels, window_size)
         Output shape: (batch_size, 1)
         """
+        x = x.unsqueeze(1)
         x = self.feature_extractor(x)
         return x
 
@@ -52,11 +54,11 @@ class ContrastiveModule(nn.Module):
 
     def forward(self, x):
         """
-        Input shape: (batch_size, 2, 1, nb_channels, 3000)
+        Input shape: (batch_size, 2, 1, nb_channels, window_size)
         Output shape: (batch_size, 1)
         """
         batch_size, _, nb_channels, window_size = x.shape
-        x = x.view(batch_size * 2, 1, nb_channels, window_size)
+        x = x.view(batch_size * 2, nb_channels, window_size)
         x = self.encoder(x)
         features = x
         x = x.view(batch_size, 2, self.num_features)
@@ -116,6 +118,10 @@ class ClassifierNet(nn.Module):
         self.softmax = nn.Softmax(dim=-1)
 
     def forward(self, x):
+        """
+        Input shape: (batch_size, n_channels, window_size)
+        Output shape: (batch_size, 1)
+        """
         x = self.encoder(x)
         x = self.dropout(x)
         x = self.dense1(x)
@@ -128,7 +134,7 @@ class ClassifierNet(nn.Module):
 def train_and_test(
         classifier_net, train_set, valid_set, test_set=None, lr=5e-4,
         batch_size=16, max_nb_epochs=20, early_stopping_patience=5,
-        train_what="last"):
+        train_what="last", score_fn=balanced_accuracy_score):
     """
     """
     if train_what == "last":
@@ -176,7 +182,8 @@ def train_and_test(
     if test_set is not None:
         X, y = zip(*list(iter(test_set)))
         X = torch.stack(X)
-        acc = skorch_classifier.score(X, y)
+        y_pred = skorch_classifier.predict(X)
+        acc = score_fn(y_pred, y)
         return skorch_classifier, acc
 
     return skorch_classifier

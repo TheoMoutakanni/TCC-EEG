@@ -105,7 +105,7 @@ class SkorchDataset(BaseConcatDataset):
 
     def __getitem__(self, index):
         x, y, _ = super().__getitem__(index)
-        return torch.from_numpy(x).unsqueeze(0), y
+        return torch.from_numpy(x), y
 
 
 def list_of_train_sets(train_subjects, windows_dataset, dataset_cls=SkorchDataset, dataset_args={}):
@@ -125,7 +125,7 @@ class TimeContrastiveDataset(BaseConcatDataset):
         list of BaseDataset, BaseConcatDataset or WindowsDataset
     """
 
-    def __init__(self, list_of_ds, delta_index_positive=10, delta_index_negative=100):
+    def __init__(self, list_of_ds, delta_index_positive=10, delta_index_negative=100, inter_subject=False):
         super(TimeContrastiveDataset, self).__init__(list_of_ds)
         self.delta_index_positive = delta_index_positive
         self.delta_index_negative = delta_index_negative

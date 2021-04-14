@@ -125,14 +125,25 @@ def multiline(xs, ys, c, ax=None, **kwargs):
     return lc
 
 
-def plot_embeddings(embds, colors, cmap, legend_dict=None, alpha=0.3, s=6, colorbar=True, legend_loc="lower right"):
+def plot_embeddings(embds, colors, cmap, markers=None, legend_dict=None, alpha=0.3, s=6, colorbar=True, legend_loc="lower right"):
+    if type(cmap) == list:
+        cmap = mpl.colors.ListedColormap(cmap)
     scatter = plt.scatter(embds[:,0], embds[:,1], c=colors, alpha=alpha, s=s, cmap=cmap)
     if legend_dict is not None:
         legend = plt.legend(*scatter.legend_elements(prop="colors"),
-                        loc=legend_loc, title=legend_dict['title'])
+                        loc=legend_loc, title=legend_dict['title'], facecolor='None')
         for i in range(len(legend.get_texts())):
             legend.get_texts()[i].set_text(legend_dict['color_mapping'][i])
         plt.gca().add_artist(legend)
+
+    if markers is not None:
+        paths = []
+        for marker in markers:
+            marker_obj = mpl.markers.MarkerStyle(marker)
+            path = marker_obj.get_path().transformed(marker_obj.get_transform())
+            paths.append(path)
+        scatter.set_paths(paths)
+
     if colorbar:
         plt.colorbar()
     plt.grid(False)
@@ -141,20 +152,29 @@ def plot_embeddings(embds, colors, cmap, legend_dict=None, alpha=0.3, s=6, color
 
 
 def get_sleep_stages(windows_dataset):
-    subjects = windows_dataset.description['subject'].apply(str).unique()
-    sleep_stages = [x[1] for x in BaseConcatDataset([windows_dataset.split('subject')[s] for s in subjects])]
+    sleep_stages = [x[1] for x in BaseConcatDataset(windows_dataset.datasets)]
     return np.array(sleep_stages)
 
 
 def get_ages(windows_dataset, info):
-    subjects = windows_dataset.description['subject'].apply(str).unique()
-    ages = [i for s in subjects
-        for i in [info[info['subject'] == int(s)]['age'].iloc[0]]*len(windows_dataset.split('subject')[s])]
+    ages = [i for idx, s in enumerate(windows_dataset.description['subject'])
+        for i in [info[info['subject'] == int(s)]['age'].iloc[0]]*len(windows_dataset.datasets[idx])]
     return np.array(ages)
 
 
+def get_sex(windows_dataset, info):
+    sex = [i for idx, s in enumerate(windows_dataset.description['subject'])
+        for i in [info[info['subject'] == int(s)]['sex (F=1)'].iloc[0]]*len(windows_dataset.datasets[idx])]
+    return np.array(sex)
+
+
 def get_subjects(windows_dataset):
-    subjects = windows_dataset.description['subject'].apply(str).unique()
-    subjects = [int(i) for s in subjects
-        for i in [s]*len(windows_dataset.split('subject')[s])]
+    subjects = [int(s) for idx, s in enumerate(windows_dataset.description['subject'])
+        for _ in [s]*len(windows_dataset.datasets[idx])]
     return np.array(subjects)
+
+
+def get_recording(windows_dataset):
+    night = [i for idx, row in windows_dataset.description.iterrows()
+        for i in [row['recording']]*len(windows_dataset.datasets[idx])]
+    return np.array(night)
