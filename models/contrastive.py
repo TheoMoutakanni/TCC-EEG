@@ -68,7 +68,7 @@ class ContrastiveModule(nn.Module):
         return x, features
 
     def train_(self, train_set, valid_set, lr=5e-4, batch_size=16, max_nb_epochs=20,
-               early_stopping_patience=5):
+               early_stopping_patience=5, early_stopping_monitor='valid_bal_acc'):
         # Train using a GPU if possible
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -80,7 +80,8 @@ class ContrastiveModule(nn.Module):
             scoring='balanced_accuracy', on_train=False, name='valid_bal_acc',
             lower_is_better=False)
         early_stopping = EarlyStopping(
-            monitor='valid_loss', patience=early_stopping_patience)
+            monitor=early_stopping_monitor, patience=early_stopping_patience,
+            lower_is_better='loss' in early_stopping_monitor)
         callbacks = [
             ('train_bal_acc', train_bal_acc),
             ('valid_bal_acc', valid_bal_acc),
@@ -134,6 +135,7 @@ class ClassifierNet(nn.Module):
 def train_and_test(
         classifier_net, train_set, valid_set, test_set=None, lr=5e-4,
         batch_size=16, max_nb_epochs=20, early_stopping_patience=5,
+        early_stopping_monitor='valid_bal_acc',
         train_what="last", score_fn=balanced_accuracy_score):
     """
     """

@@ -125,10 +125,11 @@ class TimeContrastiveDataset(BaseConcatDataset):
         list of BaseDataset, BaseConcatDataset or WindowsDataset
     """
 
-    def __init__(self, list_of_ds, delta_index_positive=10, delta_index_negative=100, inter_subject=False):
+    def __init__(self, list_of_ds, delta_index_positive=10, delta_index_negative=100, inter_subject=False, transform=None):
         super(TimeContrastiveDataset, self).__init__(list_of_ds)
         self.delta_index_positive = delta_index_positive
         self.delta_index_negative = delta_index_negative
+        self.transform = transform
 
     def __getitem__(self, idx):
         if idx < 0:
@@ -159,6 +160,9 @@ class TimeContrastiveDataset(BaseConcatDataset):
 
         X = list(zip(*[anchor_sample, contastive_sample]))[0]
         X = np.array(X)
+
+        if self.transform is not None:
+            X = self.transform(X, y)
 
         return X, y
 
